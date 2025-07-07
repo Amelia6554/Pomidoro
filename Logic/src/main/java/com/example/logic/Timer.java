@@ -48,7 +48,7 @@ public class Timer {
         }
     }
 
-    private void reset() {
+    public void reset() {
         if (countDownTimer != null) {
             countDownTimer.cancel();
         }

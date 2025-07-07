@@ -32,7 +32,7 @@ android {
 }
 
 dependencies {
-
+    implementation(project(":Logic")) // <-- TO DODAJESZ
     implementation(libs.appcompat)
     implementation(libs.material)
     implementation(libs.activity)
