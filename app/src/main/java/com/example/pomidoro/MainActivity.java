@@ -1,6 +1,10 @@
 package com.example.pomidoro;
 
+import android.content.pm.PackageManager;
+import android.Manifest;
+
 import android.graphics.Color;
+import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
@@ -34,6 +38,14 @@ public class MainActivity extends AppCompatActivity {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
 
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                    requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 1001);
+                }
+            }
+
+
+
             //// inicjalizacja przycisków
 
             study_minutes_et = findViewById(R.id.study_minutes_et);
@@ -50,7 +62,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-    boolean isStuding = true;
+    boolean isStudying = true;
     Timer timer;
 
     private int minutes;
@@ -77,7 +89,7 @@ public class MainActivity extends AppCompatActivity {
 
 
         // Sprawdzenie czy odpowiednie pole nie jest puste
-        if ((isStuding && studyInput.isEmpty()) || (!isStuding && breakInput.isEmpty())) {
+        if ((isStudying && studyInput.isEmpty()) || (!isStudying && breakInput.isEmpty())) {
             Toast.makeText(MainActivity.this, "Wprowadź poprawną liczbę minut", Toast.LENGTH_SHORT).show();
             return;
         }
@@ -102,31 +114,17 @@ public class MainActivity extends AppCompatActivity {
             start_btn.setText("STOP");
 
             int time;
-            if (isStuding) {
+            if (isStudying) {
                 time = Integer.parseInt(studyInput);
                 timer_tv.setTextColor(Color.RED);
             } else {
                 time = Integer.parseInt(breakInput);
                 timer_tv.setTextColor(Color.GREEN);
             }
-            isStuding = !isStuding;
+            isStudying = !isStudying;
 
             timer.start_timer(time * 60);
-
-
-//            countDownTimer = new CountDownTimer(time * 1000, 1000) {
-//                @Override
-//                public void onTick(long l) {
-//                    update((int) l / 1000);
-//                }
-//
-//                @Override
-//                public void onFinish() {
-//                    reset();
-//                    sendNotification(view);
-//
-//                }
-//            }.start();
+            
         } else {
             reset();
         }
@@ -139,4 +137,13 @@ public class MainActivity extends AppCompatActivity {
         start_btn.setText("Start");
         study_minutes_et.setEnabled(true);
     }
+
+    public void launchSettings(View v) {
+        ForegroundService.startService(this, 1);
+        Toast.makeText(MainActivity.this, "Ustawienia", Toast.LENGTH_SHORT).show();
+
+
+    }
+
+
 }
