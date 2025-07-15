@@ -47,14 +47,14 @@ public class MainActivity extends AppCompatActivity {
             }
 
 
-            //// inicjalizacja przycisków
+            // inicjalizacja przycisków
             initViews();
 
+            // broadcast
             IntentFilter filter = new IntentFilter();
             filter.addAction("TIMER_TICK");
             filter.addAction("TIMER_FINISHED");
             LocalBroadcastManager.getInstance(this).registerReceiver(timerReceiver, filter);
-
 
             return insets;
         });
@@ -69,7 +69,6 @@ public class MainActivity extends AppCompatActivity {
         study_minutes_et.setText("25");
         break_minutes_et.setText("5");
         timer_tv.setText("25:00");
-        //stopButton.setEnabled(false);
     }
 
     //BOROADCAST
@@ -131,30 +130,56 @@ public class MainActivity extends AppCompatActivity {
 
         if (!isTimerRunning) {
 
-            study_minutes_et.setEnabled(false);
+
             start_btn.setText("STOP");
 
-            int time;
+            int minutes;
             if (isStudying) {
-                time = Integer.parseInt(studyInput);
+                minutes = Integer.parseInt(studyInput);
                 timer_tv.setTextColor(Color.RED);
+                study_minutes_et.setEnabled(false);
             } else {
-                time = Integer.parseInt(breakInput);
+                minutes = Integer.parseInt(breakInput);
                 timer_tv.setTextColor(Color.GREEN);
+                break_minutes_et.setEnabled(false);
             }
             isStudying = !isStudying;
-            ForegroundService.startService(this, time);
+            ForegroundService.startService(this, minutes);
+            // Zaktualizuj interfejs
+            isTimerRunning = true;
+            //start_btn.setEnabled(false);
 
+            // Ustaw początkowy czas na wyświetlaczu
+            updateTimerDisplay(minutes * 60);
+
+            Toast.makeText(this, "Pomodoro rozpoczęte!", Toast.LENGTH_SHORT).show();
 
         } else {
-            onTimerFinished();
+            stopTimer();
         }
     }
 
+    private void stopTimer() {
+        ForegroundService.stopService(this);
+        onTimerFinished();
+        Toast.makeText(this, "Pomodoro zatrzymane", Toast.LENGTH_SHORT).show();
+    }
+
     public void launchSettings(View v) {
-        ForegroundService.startService(this, 1);
         Toast.makeText(MainActivity.this, "Ustawienia", Toast.LENGTH_SHORT).show();
 
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(timerReceiver);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // Możesz tutaj sprawdzić czy timer jest aktywny i zaktualizować interfejs
     }
 
 

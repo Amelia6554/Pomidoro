@@ -145,7 +145,7 @@ public class ForegroundService extends Service {
     public void onDestroy() {
         super.onDestroy();
         if (timer != null) {
-            //timer.stop_timer(); // Jeśli masz taką metodę w klasie Timer
+            timer.reset(); // Jeśli masz taką metodę w klasie Timer
         }
     }
 
