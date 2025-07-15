@@ -11,6 +11,7 @@ import android.os.Build;
 import android.os.IBinder;
 
 import androidx.core.app.NotificationCompat;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.example.logic.Timer;
 import com.example.logic.TimerListener;
@@ -23,17 +24,19 @@ public class ForegroundService extends Service {
 
     private NotificationManager notificationManager;
     private Timer timer;
+    private LocalBroadcastManager broadcastManager;
 
     @Override
     public void onCreate() {
         super.onCreate();
         notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        broadcastManager = LocalBroadcastManager.getInstance(this);
         createChannels();
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        int minutes = intent.getIntExtra(EXTRA_MINUTES, 25); // domyślnie 25
+        int minutes = intent.getIntExtra(EXTRA_MINUTES, 25);
         startForeground(ONGOING_NOTIFICATION_ID, buildSilentNotification("Pomodoro start: " + minutes + " minut"));
         startPomodoroTimer(minutes);
         return START_STICKY;
@@ -44,41 +47,44 @@ public class ForegroundService extends Service {
         timer.setListener(new TimerListener() {
             @Override
             public void onTick(int secondsLeft) {
-                updateNotification("Pozostało: " + secondsLeft + " sek.");
+                // Aktualizuj powiadomienie
+                updateNotification("Pozostało: " + formatTime(secondsLeft));
+
+                // Wyślij broadcast do MainActivity
+                Intent intent = new Intent("TIMER_TICK");
+                intent.putExtra("seconds_left", secondsLeft);
+                broadcastManager.sendBroadcast(intent);
             }
 
             @Override
             public void onFinish() {
+                // Pokaż powiadomienie o zakończeniu
                 notificationManager.notify(314, buildAlertNotification("Pomodoro zakończone!"));
-                stopSelf(); // opcjonalnie zatrzymaj serwis po zakończeniu
+
+                // Wyślij broadcast o zakończeniu
+                Intent intent = new Intent("TIMER_FINISHED");
+                broadcastManager.sendBroadcast(intent);
+
+                // Zatrzymaj serwis
+                stopSelf();
             }
         });
+
         int totalSeconds = minutes * 60;
-        updateNotification("Pozostało: " + totalSeconds + " sek.");
-        timer.start_timer(totalSeconds); // np. 25 minut
+        updateNotification("Pozostało: " + formatTime(totalSeconds));
+        timer.start_timer(totalSeconds);
+    }
+
+    private String formatTime(int seconds) {
+        int minutes = seconds / 60;
+        int secs = seconds % 60;
+        return String.format("%02d:%02d", minutes, secs);
     }
 
     private void updateNotification(String contentText) {
         Notification notification = buildSilentNotification(contentText);
         notificationManager.notify(ONGOING_NOTIFICATION_ID, notification);
     }
-
-
-//    private Notification buildNotification(String channelId, String title, String contentText, boolean ongoing) {
-//        Intent intent = new Intent(this, MainActivity.class);
-//        PendingIntent pendingIntent = PendingIntent.getActivity(
-//                this, 0, intent, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT
-//        );
-//
-//        return new NotificationCompat.Builder(this, channelId)
-//                .setContentTitle(title)
-//                .setContentText(contentText)
-//                .setSmallIcon(R.drawable.ic_baseline_access_alarm_24)
-//                .setContentIntent(pendingIntent)
-//                .setOngoing(ongoing)
-//                .build();
-//    }
-
 
     private Notification buildSilentNotification(String contentText) {
         Intent intent = new Intent(this, MainActivity.class);
@@ -95,7 +101,6 @@ public class ForegroundService extends Service {
                 .build();
     }
 
-
     private Notification buildAlertNotification(String contentText) {
         Intent intent = new Intent(this, MainActivity.class);
         PendingIntent pendingIntent = PendingIntent.getActivity(
@@ -110,8 +115,6 @@ public class ForegroundService extends Service {
                 .setOngoing(false)
                 .build();
     }
-
-
 
     private void createChannels() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -138,17 +141,13 @@ public class ForegroundService extends Service {
         }
     }
 
-//    private void createServiceNotificationChannel() {
-//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-//            NotificationChannel channel = new NotificationChannel(
-//                    CHANNEL_ID,
-//                    "Pomodoro channel",
-//                    NotificationManager.IMPORTANCE_LOW
-//            );
-//            channel.setLockscreenVisibility(Notification.VISIBILITY_PRIVATE);
-//            notificationManager.createNotificationChannel(channel);
-//        }
-//    }
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        if (timer != null) {
+            //timer.stop_timer(); // Jeśli masz taką metodę w klasie Timer
+        }
+    }
 
     // Static methods to start/stop service
     public static void startService(Context context, int minutes) {
@@ -166,11 +165,8 @@ public class ForegroundService extends Service {
         context.stopService(intent);
     }
 
-
     @Override
     public IBinder onBind(Intent intent) {
         return null;
     }
-
-
 }

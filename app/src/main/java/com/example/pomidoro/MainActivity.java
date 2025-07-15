@@ -1,8 +1,11 @@
 package com.example.pomidoro;
 
-import android.content.pm.PackageManager;
 import android.Manifest;
-
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
@@ -17,9 +20,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
-
-import com.example.logic.Timer;
-import com.example.logic.TimerListener;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 
 public class MainActivity extends AppCompatActivity {
@@ -28,6 +29,7 @@ public class MainActivity extends AppCompatActivity {
     EditText break_minutes_et;
     TextView timer_tv;
     Button start_btn;
+    boolean isTimerRunning;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -45,40 +47,74 @@ public class MainActivity extends AppCompatActivity {
             }
 
 
-
             //// inicjalizacja przycisków
+            initViews();
 
-            study_minutes_et = findViewById(R.id.study_minutes_et);
-            break_minutes_et = findViewById(R.id.break_minutes_et);
-            timer_tv = findViewById(R.id.timer_tv);
-            start_btn = findViewById(R.id.start_btn);
-
-            //// timer
-            timer = new Timer();
+            IntentFilter filter = new IntentFilter();
+            filter.addAction("TIMER_TICK");
+            filter.addAction("TIMER_FINISHED");
+            LocalBroadcastManager.getInstance(this).registerReceiver(timerReceiver, filter);
 
 
             return insets;
         });
     }
 
+    private void initViews() {
+        study_minutes_et = findViewById(R.id.study_minutes_et);
+        break_minutes_et = findViewById(R.id.break_minutes_et);
+        timer_tv = findViewById(R.id.timer_tv);
+        start_btn = findViewById(R.id.start_btn);
+
+        study_minutes_et.setText("25");
+        break_minutes_et.setText("5");
+        timer_tv.setText("25:00");
+        //stopButton.setEnabled(false);
+    }
+
+    //BOROADCAST
+    private BroadcastReceiver timerReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String action = intent.getAction();
+            if ("TIMER_TICK".equals(action)) {
+                int secondsLeft = intent.getIntExtra("seconds_left", 0);
+                updateTimerDisplay(secondsLeft);
+            } else if ("TIMER_FINISHED".equals(action)) {
+                onTimerFinished();
+            }
+        }
+    };
+
 
     boolean isStudying = true;
-    Timer timer;
 
-    private int minutes;
-    private int seconds;
+    private void updateTimerDisplay(int secondsLeft) {
+        int minutes = secondsLeft / 60;
+        int seconds = secondsLeft % 60;
+        String timeString = String.format("%02d:%02d", minutes, seconds);
+        timer_tv.setText(timeString);
+    }
 
-    private void update(int progress) {
-        minutes = progress / 60;
-        seconds = progress % 60;
-        String secondsFinal = "";
+    private void onTimerFinished() {
+        isTimerRunning = false;
+        start_btn.setEnabled(true);
+        //stopButton.setEnabled(false);
+        study_minutes_et.setEnabled(true);
+        break_minutes_et.setEnabled(true);
 
-        if (seconds <= 9) {
-            secondsFinal = "0" + seconds;
+        // Przywróć domyślny czas
+        String defaultMinutes = study_minutes_et.getText().toString();
+        if (!defaultMinutes.isEmpty()) {
+            try {
+                int minutes = Integer.parseInt(defaultMinutes);
+                updateTimerDisplay(minutes * 60);
+            } catch (NumberFormatException e) {
+                timer_tv.setText("25:00");
+            }
         } else {
-            secondsFinal = "" + seconds;
+            timer_tv.setText("25:00");
         }
-        timer_tv.setText("" + minutes + ":" + secondsFinal);
     }
 
 
@@ -87,28 +123,13 @@ public class MainActivity extends AppCompatActivity {
         String studyInput = study_minutes_et.getText().toString().trim();
         String breakInput = break_minutes_et.getText().toString().trim();
 
-
         // Sprawdzenie czy odpowiednie pole nie jest puste
         if ((isStudying && studyInput.isEmpty()) || (!isStudying && breakInput.isEmpty())) {
             Toast.makeText(MainActivity.this, "Wprowadź poprawną liczbę minut", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        if (!timer.isCounterIsActive()) {
-
-            timer.setListener(new TimerListener() {
-                @Override
-                public void onTick(int secondsLeft) {
-                    update(secondsLeft);
-//                    textView.setText("Pozostało: " + secondsLeft + " sek.");
-                }
-
-                @Override
-                public void onFinish() {
-                    Toast.makeText(MainActivity.this, "Czas minął!", Toast.LENGTH_SHORT).show();
-                }
-            });
-
+        if (!isTimerRunning) {
 
             study_minutes_et.setEnabled(false);
             start_btn.setText("STOP");
@@ -122,26 +143,17 @@ public class MainActivity extends AppCompatActivity {
                 timer_tv.setTextColor(Color.GREEN);
             }
             isStudying = !isStudying;
+            ForegroundService.startService(this, time);
 
-            timer.start_timer(time * 60);
-            
+
         } else {
-            reset();
+            onTimerFinished();
         }
-    }
-
-    private void reset() {
-        timer_tv.setText("0:00");
-        //timer_tv.setTextColor(Color.RED);
-        timer.reset();
-        start_btn.setText("Start");
-        study_minutes_et.setEnabled(true);
     }
 
     public void launchSettings(View v) {
         ForegroundService.startService(this, 1);
         Toast.makeText(MainActivity.this, "Ustawienia", Toast.LENGTH_SHORT).show();
-
 
     }
 
