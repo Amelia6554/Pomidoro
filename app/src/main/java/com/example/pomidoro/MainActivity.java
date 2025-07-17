@@ -49,6 +49,7 @@ public class MainActivity extends AppCompatActivity {
 
             // inicjalizacja przycisków
             initViews();
+            setupListeners();
 
             // broadcast
             IntentFilter filter = new IntentFilter();
@@ -71,6 +72,15 @@ public class MainActivity extends AppCompatActivity {
         timer_tv.setText("25:00");
     }
 
+    private void setupListeners() {
+        start_btn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                start_timer();
+            }
+        });
+    }
+
     //BOROADCAST
     private BroadcastReceiver timerReceiver = new BroadcastReceiver() {
         @Override
@@ -86,6 +96,8 @@ public class MainActivity extends AppCompatActivity {
     };
 
 
+
+
     boolean isStudying = true;
 
     private void updateTimerDisplay(int secondsLeft) {
@@ -98,9 +110,9 @@ public class MainActivity extends AppCompatActivity {
     private void onTimerFinished() {
         isTimerRunning = false;
         start_btn.setEnabled(true);
-        //stopButton.setEnabled(false);
         study_minutes_et.setEnabled(true);
         break_minutes_et.setEnabled(true);
+        start_btn.setText("START");
 
         // Przywróć domyślny czas
         String defaultMinutes = study_minutes_et.getText().toString();
@@ -117,7 +129,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-    public void start_timer(View view) {
+    public void start_timer() {
 
         String studyInput = study_minutes_et.getText().toString().trim();
         String breakInput = break_minutes_et.getText().toString().trim();
@@ -156,6 +168,7 @@ public class MainActivity extends AppCompatActivity {
 
         } else {
             stopTimer();
+            start_btn.setText("STOP");
         }
     }
 
@@ -167,12 +180,16 @@ public class MainActivity extends AppCompatActivity {
 
     public void launchSettings(View v) {
         Toast.makeText(MainActivity.this, "Ustawienia", Toast.LENGTH_SHORT).show();
-
+            Intent i = new Intent(this, SettingsActivity.class);
+            //String message = ((EditText)findViewById(R.id.source)).getText().toString();
+            i.putExtra("Package", "Ustawienia");
+            startActivity(i);
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        ForegroundService.stopService(this);
         LocalBroadcastManager.getInstance(this).unregisterReceiver(timerReceiver);
     }
 
