@@ -29,7 +29,12 @@ public class MainActivity extends AppCompatActivity {
     EditText break_minutes_et;
     TextView timer_tv;
     Button start_btn;
+    Button cancel_btn;
+    Button settings_btn;
     boolean isTimerRunning;
+    boolean isPaused = false;
+    int secondsLeft = 0;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -66,9 +71,15 @@ public class MainActivity extends AppCompatActivity {
         break_minutes_et = findViewById(R.id.break_minutes_et);
         timer_tv = findViewById(R.id.timer_tv);
         start_btn = findViewById(R.id.start_btn);
+        cancel_btn = findViewById(R.id.cancel_btn);
+        settings_btn = findViewById(R.id.settings_btn);
 
-        study_minutes_et.setText("25");
-        break_minutes_et.setText("5");
+        if (study_minutes_et.getText().toString().isEmpty())
+            study_minutes_et.setText("25");
+
+        if (break_minutes_et.getText().toString().isEmpty())
+            break_minutes_et.setText("5");
+
         timer_tv.setText("25:00");
     }
 
@@ -79,6 +90,20 @@ public class MainActivity extends AppCompatActivity {
                 start_timer();
             }
         });
+
+        cancel_btn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                stopTimer();
+            }
+        });
+
+        settings_btn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                launchSettings();
+            }
+        });
     }
 
     //BOROADCAST
@@ -87,7 +112,7 @@ public class MainActivity extends AppCompatActivity {
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
             if ("TIMER_TICK".equals(action)) {
-                int secondsLeft = intent.getIntExtra("seconds_left", 0);
+                secondsLeft = intent.getIntExtra("seconds_left", 0);
                 updateTimerDisplay(secondsLeft);
             } else if ("TIMER_FINISHED".equals(action)) {
                 onTimerFinished();
@@ -139,37 +164,70 @@ public class MainActivity extends AppCompatActivity {
             Toast.makeText(MainActivity.this, "Wprowadź poprawną liczbę minut", Toast.LENGTH_SHORT).show();
             return;
         }
+//
+//        if (!isTimerRunning) {
+//
+//
+//            start_btn.setText("STOP");
+//
+//            int minutes;
+//            if (isStudying) {
+//                minutes = Integer.parseInt(studyInput);
+//                timer_tv.setTextColor(Color.RED);
+//                study_minutes_et.setEnabled(false);
+//            } else {
+//                minutes = Integer.parseInt(breakInput);
+//                timer_tv.setTextColor(Color.GREEN);
+//                break_minutes_et.setEnabled(false);
+//            }
+//            isStudying = !isStudying;
+//            ForegroundService.startService(this, minutes);
+//            // Zaktualizuj interfejs
+//            isTimerRunning = true;
+//            //start_btn.setEnabled(false);
+//
+//            // Ustaw początkowy czas na wyświetlaczu
+//            updateTimerDisplay(minutes * 60);
+//
+//            Toast.makeText(this, "Pomodoro rozpoczęte!", Toast.LENGTH_SHORT).show();
+//
+//        } else {
+//            stopTimer();
+//            start_btn.setText("STOP");
+//        }
 
-        if (!isTimerRunning) {
-
-
-            start_btn.setText("STOP");
-
-            int minutes;
+        int minutes;
             if (isStudying) {
                 minutes = Integer.parseInt(studyInput);
-                timer_tv.setTextColor(Color.RED);
+                //timer_tv.setTextColor(Color.RED);
                 study_minutes_et.setEnabled(false);
             } else {
                 minutes = Integer.parseInt(breakInput);
-                timer_tv.setTextColor(Color.GREEN);
+                //timer_tv.setTextColor(Color.GREEN);
                 break_minutes_et.setEnabled(false);
             }
             isStudying = !isStudying;
-            ForegroundService.startService(this, minutes);
-            // Zaktualizuj interfejs
+
+        if (!isTimerRunning && !isPaused) {
+            // start nowy timer
+            secondsLeft = minutes * 60;
+            ForegroundService.startService(this, secondsLeft);
             isTimerRunning = true;
-            //start_btn.setEnabled(false);
-
-            // Ustaw początkowy czas na wyświetlaczu
-            updateTimerDisplay(minutes * 60);
-
-            Toast.makeText(this, "Pomodoro rozpoczęte!", Toast.LENGTH_SHORT).show();
-
-        } else {
-            stopTimer();
+            start_btn.setText("STOP");
+        } else if (isTimerRunning) {
+            // zatrzymaj, ale zapamiętaj czas
+            isPaused = true;
+            isTimerRunning = false;
+            ForegroundService.stopService(this);
+            start_btn.setText("WZNÓW");
+        } else if (isPaused) {
+            // wznowienie
+            ForegroundService.startService(this, secondsLeft);
+            isTimerRunning = true;
+            isPaused = false;
             start_btn.setText("STOP");
         }
+
     }
 
     private void stopTimer() {
@@ -178,7 +236,7 @@ public class MainActivity extends AppCompatActivity {
         Toast.makeText(this, "Pomodoro zatrzymane", Toast.LENGTH_SHORT).show();
     }
 
-    public void launchSettings(View v) {
+    public void launchSettings() {
         Toast.makeText(MainActivity.this, "Ustawienia", Toast.LENGTH_SHORT).show();
             Intent i = new Intent(this, SettingsActivity.class);
             //String message = ((EditText)findViewById(R.id.source)).getText().toString();

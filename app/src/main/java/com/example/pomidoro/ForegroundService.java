@@ -20,7 +20,7 @@ public class ForegroundService extends Service {
     private static final int ONGOING_NOTIFICATION_ID = 101;
     private static final String CHANNEL_ALERT = "CHANNEL_ALERT";
     private static final String CHANNEL_SILENT = "CHANNEL_SILENT";
-    private static final String EXTRA_MINUTES = "EXTRA_MINUTES";
+    private static final String EXTRA_SECONDS = "EXTRA_SECONDS";
 
     private NotificationManager notificationManager;
     private Timer timer;
@@ -36,13 +36,13 @@ public class ForegroundService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        int minutes = intent.getIntExtra(EXTRA_MINUTES, 25);
+        int minutes = intent.getIntExtra(EXTRA_SECONDS, 25);
         startForeground(ONGOING_NOTIFICATION_ID, buildSilentNotification("Pomodoro start: " + minutes + " minut"));
         startPomodoroTimer(minutes);
         return START_STICKY;
     }
 
-    private void startPomodoroTimer(int minutes) {
+    private void startPomodoroTimer(int secondsLeft) {
         timer = new Timer();
         timer.setListener(new TimerListener() {
             @Override
@@ -70,9 +70,8 @@ public class ForegroundService extends Service {
             }
         });
 
-        int totalSeconds = minutes * 60;
-        updateNotification("Pozostało: " + formatTime(totalSeconds));
-        timer.start_timer(totalSeconds);
+        updateNotification("Pozostało: " + formatTime(secondsLeft));
+        timer.start_timer(secondsLeft);
     }
 
     private String formatTime(int seconds) {
@@ -150,9 +149,9 @@ public class ForegroundService extends Service {
     }
 
     // Static methods to start/stop service
-    public static void startService(Context context, int minutes) {
+    public static void startService(Context context, int secondsLeft) {
         Intent intent = new Intent(context, ForegroundService.class);
-        intent.putExtra(EXTRA_MINUTES, minutes);
+        intent.putExtra(EXTRA_SECONDS, secondsLeft);
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
             context.startService(intent);
         } else {
