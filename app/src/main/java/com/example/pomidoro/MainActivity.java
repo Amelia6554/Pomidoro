@@ -31,6 +31,8 @@ public class MainActivity extends AppCompatActivity {
     Button start_btn;
     Button cancel_btn;
     Button settings_btn;
+    Button next_btn;
+
     boolean isTimerRunning;
     boolean isPaused = false;
     int secondsLeft = 0;
@@ -73,6 +75,7 @@ public class MainActivity extends AppCompatActivity {
         start_btn = findViewById(R.id.start_btn);
         cancel_btn = findViewById(R.id.cancel_btn);
         settings_btn = findViewById(R.id.settings_btn);
+        next_btn = findViewById(R.id.next_btn);
 
         if (study_minutes_et.getText().toString().isEmpty())
             study_minutes_et.setText("25");
@@ -102,6 +105,13 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 launchSettings();
+            }
+        });
+
+        next_btn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                nextTimer();
             }
         });
     }
@@ -196,38 +206,49 @@ public class MainActivity extends AppCompatActivity {
 //            start_btn.setText("STOP");
 //        }
 
-        int minutes;
-            if (isStudying) {
-                minutes = Integer.parseInt(studyInput);
-                //timer_tv.setTextColor(Color.RED);
-                study_minutes_et.setEnabled(false);
-            } else {
-                minutes = Integer.parseInt(breakInput);
-                //timer_tv.setTextColor(Color.GREEN);
-                break_minutes_et.setEnabled(false);
-            }
-            isStudying = !isStudying;
-
         if (!isTimerRunning && !isPaused) {
             // start nowy timer
-            secondsLeft = minutes * 60;
+            secondsLeft = getMinutes(studyInput, breakInput) * 60;
             ForegroundService.startService(this, secondsLeft);
             isTimerRunning = true;
-            start_btn.setText("STOP");
+            start_btn.setText(R.string.stop_text);
         } else if (isTimerRunning) {
             // zatrzymaj, ale zapamiętaj czas
             isPaused = true;
             isTimerRunning = false;
             ForegroundService.stopService(this);
-            start_btn.setText("WZNÓW");
+            start_btn.setText(R.string.resume_text);
         } else if (isPaused) {
             // wznowienie
             ForegroundService.startService(this, secondsLeft);
             isTimerRunning = true;
             isPaused = false;
-            start_btn.setText("STOP");
+            start_btn.setText(R.string.stop_text);
         }
 
+    }
+
+    private int getMinutes(String studyInput, String breakInput) {
+        int minutes;
+        if (isStudying) {
+            minutes = Integer.parseInt(studyInput);
+            timer_tv.setTextColor(Color.HSVToColor(new float[]{294, 99, 99}));
+            study_minutes_et.setEnabled(false);
+        } else {
+            minutes = Integer.parseInt(breakInput);
+            timer_tv.setTextColor(Color.HSVToColor(new float[]{89, 99, 99}));
+            break_minutes_et.setEnabled(false);
+        }
+        isStudying = !isStudying;
+        return minutes;
+    }
+
+    private void nextTimer(){
+        stopTimer();
+        isPaused = false;
+        isTimerRunning = false;
+        //isStudying = !isStudying;
+        start_timer();
     }
 
     private void stopTimer() {

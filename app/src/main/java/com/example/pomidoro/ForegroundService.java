@@ -59,7 +59,9 @@ public class ForegroundService extends Service {
             @Override
             public void onFinish() {
                 // Pokaż powiadomienie o zakończeniu
-                notificationManager.notify(314, buildAlertNotification("Pomodoro zakończone!"));
+                //for (int i = 0; i < 3; i++) {
+                    notificationManager.notify(314, buildAlertNotification("Pomodoro zakończone!"));
+                //}
 
                 // Wyślij broadcast o zakończeniu
                 Intent intent = new Intent("TIMER_FINISHED");

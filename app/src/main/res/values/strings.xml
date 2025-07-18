@@ -6,4 +6,6 @@
     <string name="break_text">Przerwa</string>
     <string name="cancel_text">Cancel</string>
     <string name="next_text">Next</string>
+    <string name="stop_text">Stop</string>
+    <string name="resume_text">Resume</string>
 </resources>
